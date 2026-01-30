@@ -28,7 +28,7 @@ async function main() {
   // or session ID from environment
   const sessionId = process.env.CLAUDE_SESSION_ID || process.ppid || 'default';
   const counterFile = path.join(getTempDir(), `claude-tool-count-${sessionId}`);
-  const threshold = parseInt(process.env.COMPACT_THRESHOLD || '50', 10);
+  const threshold = parseInt(process.env.COMPACT_THRESHOLD || '20', 10);
 
   let count = 1;
 
@@ -41,14 +41,19 @@ async function main() {
   // Save updated count
   writeFile(counterFile, String(count));
 
-  // Suggest compact after threshold tool calls
+  // Suggest compact at multiple checkpoints
   if (count === threshold) {
-    log(`[StrategicCompact] ${threshold} tool calls reached - consider /compact if transitioning phases`);
+    log(`[StrategicCompact] ${threshold} tool calls - consider /compact to preserve context`);
   }
 
-  // Suggest at regular intervals after threshold
-  if (count > threshold && count % 25 === 0) {
-    log(`[StrategicCompact] ${count} tool calls - good checkpoint for /compact if context is stale`);
+  // Suggest at regular intervals after threshold (every 10 calls)
+  if (count > threshold && count % 10 === 0) {
+    log(`[StrategicCompact] ${count} tool calls - use /compact if transitioning to new task`);
+  }
+
+  // Also suggest at very high counts (every 25 after 50)
+  if (count >= 50 && count % 25 === 0) {
+    log(`[StrategicCompact] ${count} tool calls - strongly recommend /compact to reduce token usage`);
   }
 
   process.exit(0);
